@@ -237,9 +237,19 @@ with st.sidebar:
     1. Enter a GitHub URL
     2. CodeLens performs a shallow clone
     3. Structural analysis & filtering
-    4. Cloud AI processes the context
+    4. AI processes the context
     5. Detailed report generated
-    """, help="No execution of remote code occurs.")
+    """)
+    
+    st.markdown("---")
+    st.markdown("### ☁️ Cloud AI vs 🖥️ Local Ollama")
+    st.markdown("""
+    **Cloud AI (Streamlit Cloud):**
+    When deployed publicly, CodeLens uses ultra-fast cloud inference (Groq/HuggingFace). This means *anyone* can use your app without installing anything! The Cloud AI securely reads your repository structure and explains it instantly.
+    
+    **Local Ollama (Offline Mode):**
+    If you run this project locally on your own laptop, you can switch it to use `Qwen 2.5 3B` via your local Ollama server. This means 100% of the code stays on your machine and works completely without internet!
+    """)
 
 # Main Layout
 st.markdown("""
@@ -350,7 +360,7 @@ if "last_result" in st.session_state:
         
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Professional Navigation Bar using styled horizontal radio
+    # Professional Navigation Bar using native Streamlit horizontal radio
     nav_options = [
         "Overview", 
         "Repository Structure", 
@@ -365,42 +375,8 @@ if "last_result" in st.session_state:
         "Setup"
     ]
     
-    st.markdown("""
-        <style>
-            div.row-widget.stRadio > div {
-                flex-direction: row;
-                flex-wrap: wrap;
-                gap: 10px;
-                padding-bottom: 20px;
-                border-bottom: 2px solid #e2e8f0;
-                margin-bottom: 20px;
-            }
-            div.row-widget.stRadio > div > label {
-                background: white;
-                border: 1px solid #cbd5e1;
-                border-radius: 6px;
-                padding: 10px 16px;
-                cursor: pointer;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                transition: all 0.2s ease;
-            }
-            div.row-widget.stRadio > div > label:hover {
-                border-color: var(--primary);
-                background: #f8fafc;
-            }
-            /* Styling text */
-            div.row-widget.stRadio > div > label p {
-                font-weight: 600 !important;
-                margin: 0;
-            }
-            /* Hide the radio circle */
-            div.row-widget.stRadio > div > label span[data-baseweb="radio"] {
-                display: none !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    selected_tab = st.radio("Navigation", nav_options, horizontal=True, label_visibility="collapsed")
+    selected_tab = st.radio("📑 Select Analysis Section:", nav_options, horizontal=True)
+    st.markdown("---")
     
     if selected_tab == "Overview":
         st.markdown("### Project Overview")
