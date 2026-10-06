@@ -98,9 +98,11 @@ def _call_ollama(prompt: str) -> str:
         "options": {"num_ctx": 8192}
     }
     try:
-        response = requests.post("http://127.0.0.1:11434/api/generate", json=payload, timeout=LLM_TIMEOUT_SECONDS)
+        response = requests.post("http://127.0.0.1:11434/api/generate", json=payload, timeout=900)
         response.raise_for_status()
         return response.json().get("response", "").strip()
+    except requests.Timeout as e:
+        raise OllamaTimeoutError("Local Ollama timed out after 15 minutes. The model might be struggling to run on this machine.") from e
     except requests.RequestException as e:
         raise OllamaResponseError(f"Ollama generation failed: {e}")
 
