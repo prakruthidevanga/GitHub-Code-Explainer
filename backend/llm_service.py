@@ -93,7 +93,8 @@ def _call_ollama(prompt: str) -> str:
     payload = {
         "model": "qwen2.5:3b", 
         "prompt": prompt, 
-        "stream": False, 
+        "stream": False,
+        "keep_alive": "5m",
         "options": {"num_ctx": 8192}
     }
     try:

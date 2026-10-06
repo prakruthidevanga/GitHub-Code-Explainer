@@ -330,19 +330,29 @@ with col2:
 def perform_analysis(url, mode):
     started_at = time.perf_counter()
     validate_github_url(url)
+    
+    timings = {}
 
     with tempfile.TemporaryDirectory() as temporary_folder:
+        t0 = time.perf_counter()
         repository = clone_repository(
             url, str(Path(temporary_folder) / "repository")
         )
+        timings["clone"] = time.perf_counter() - t0
+        
         with repository:
+            t1 = time.perf_counter()
             file_entries = list_repository_files(repository)
             if not file_entries:
                 raise ValueError("The GitHub repository contains no tracked files.")
 
             structures, content_items, analysis_notes = inspect_repository_files(file_entries)
             repository_type = detect_repository_type(file_entries, content_items)
+            timings["scanning"] = time.perf_counter() - t1
+            
+            t2 = time.perf_counter()
             context, analyzed_paths = build_model_context(file_entries, content_items, structures)
+            timings["context"] = time.perf_counter() - t2
             
             if len(file_entries) >= MAX_DISCOVERED_FILES:
                 analysis_notes.append("File discovery safety limit reached. Inventory may be incomplete.")
@@ -353,6 +363,7 @@ def perform_analysis(url, mode):
             if repository_name.endswith(".git"):
                 repository_name = repository_name[:-4]
                 
+            t3 = time.perf_counter()
             explanation, req_count = explain_repository_contents(
                 repository_name,
                 repository_type,
@@ -360,6 +371,8 @@ def perform_analysis(url, mode):
                 analysis_notes,
                 mode
             )
+            timings["llm_request"] = time.perf_counter() - t3
+            timings["total"] = time.perf_counter() - started_at
 
             return {
                 "success": True,
@@ -372,7 +385,8 @@ def perform_analysis(url, mode):
                 "file_type_summary": summarize_file_types(file_entries),
                 "analysis_notes": analysis_notes,
                 "tree": generate_file_tree(structures),
-                "analysis_time_seconds": round(time.perf_counter() - started_at, 2),
+                "analysis_time_seconds": round(timings["total"], 2),
+                "timings": timings,
                 "explanation": explanation,
             }
 
@@ -499,8 +513,17 @@ if "last_result" in st.session_state:
     elif selected_tab == "Technical Details":
         st.markdown("### Technical & Performance Details")
         st.markdown(f"- **Binary Files Skipped**: {res['binary_files']}")
-        st.markdown(f"- **Context Building & Clone Time**: ~{res['analysis_time_seconds']} seconds")
         st.markdown(f"- **Limits Reached**: {'Yes' if 'safety limit' in str(res['analysis_notes']) else 'No'}")
+        
+        st.markdown("#### Performance Breakdown")
+        t = res.get("timings", {})
+        if t:
+            st.markdown(f"- **Repository Clone:** {t.get('clone', 0):.2f}s")
+            st.markdown(f"- **Repository Scanning:** {t.get('scanning', 0):.2f}s")
+            st.markdown(f"- **Context Building:** {t.get('context', 0):.2f}s")
+            st.markdown(f"- **Ollama/Cloud Request:** {t.get('llm_request', 0):.2f}s")
+            st.markdown(f"- **Total Analysis Time:** {t.get('total', res['analysis_time_seconds']):.2f}s")
+            
         if res["analysis_notes"]:
             st.markdown("#### Analysis Notes")
             for note in res["analysis_notes"]:
