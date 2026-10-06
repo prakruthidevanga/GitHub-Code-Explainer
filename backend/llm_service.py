@@ -102,22 +102,35 @@ Repository evidence (file inventory, structural summaries, and selected excerpts
 {context}
 
 Return a complete Markdown report containing exactly these sections. Do not include any extra chat text.
-# 1. 1-2 Minute Explanation
-Write a 180-250 word natural spoken explanation suitable for a BCA student explaining the repository to a professor. Explain project name, problem solved, purpose, technologies, architecture, and final outcome.
-# 2. Project Overview
-# 3. Main Technologies
-# 4. Repository Structure
-# 5. Architecture & How It Works
-# 6. Data / Execution Flow
-# 7. Important Files & Their Roles
-# 8. Key Features
-# 9. Models / Algorithms / Logic
-# 10. Inputs, Outputs & Interfaces
-# 11. Dependencies & Configuration
-# 12. Limitations
-# 13. Future Improvements
-# 14. Final Summary
-"""
+# AI Explanation
+Write a comprehensive, beginner-friendly but technically accurate explanation of the entire repository. (180-250 words)
+
+# Overview
+What is this project and what problem does it solve?
+
+# Architecture
+What is the actual architecture of the submitted repository?
+
+# Files & Folders
+Explain important files individually. Include purpose, contents, important functions/classes, connections, and role.
+
+# Technologies
+Identify technologies from repository evidence.
+
+# Code Analysis
+Explain important classes, functions, modules, inputs, outputs, and relationships.
+
+# Workflow
+Explain how the repository works from input to output.
+
+# Dependencies
+What dependencies are used?
+
+# Setup
+How is the project configured and deployed based on the evidence?
+
+# Limitations
+What information cannot be determined?"""
     logger.info("Cloud LLM prompt prepared in %.2fs (%d chars)", time.perf_counter() - prompt_started, len(prompt))
     answer = _call_cloud_llm(prompt)
     return answer, 1
