@@ -350,8 +350,8 @@ if "last_result" in st.session_state:
         
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Tabs definition
-    tabs = st.tabs([
+    # Professional Navigation Bar using styled horizontal radio
+    nav_options = [
         "Overview", 
         "Repository Structure", 
         "Files & Folders", 
@@ -363,48 +363,85 @@ if "last_result" in st.session_state:
         "AI Explanation", 
         "Technical Details", 
         "Setup"
-    ])
+    ]
     
-    with tabs[0]:
+    st.markdown("""
+        <style>
+            div.row-widget.stRadio > div {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 10px;
+                padding-bottom: 20px;
+                border-bottom: 2px solid #e2e8f0;
+                margin-bottom: 20px;
+            }
+            div.row-widget.stRadio > div > label {
+                background: white;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 10px 16px;
+                cursor: pointer;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                transition: all 0.2s ease;
+            }
+            div.row-widget.stRadio > div > label:hover {
+                border-color: var(--primary);
+                background: #f8fafc;
+            }
+            /* Styling text */
+            div.row-widget.stRadio > div > label p {
+                font-weight: 600 !important;
+                margin: 0;
+            }
+            /* Hide the radio circle */
+            div.row-widget.stRadio > div > label span[data-baseweb="radio"] {
+                display: none !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    selected_tab = st.radio("Navigation", nav_options, horizontal=True, label_visibility="collapsed")
+    
+    if selected_tab == "Overview":
         st.markdown("### Project Overview")
         st.markdown(extract_section(exp, "Overview"))
         
-    with tabs[1]:
+    elif selected_tab == "Repository Structure":
         st.markdown("### Repository Structure")
         st.markdown(f'<pre class="tree-pre">{res["tree"]}</pre>', unsafe_allow_html=True)
         
-    with tabs[2]:
+    elif selected_tab == "Files & Folders":
         st.markdown("### Files & Folders")
         st.markdown(extract_section(exp, "Files & Folders"))
         
-    with tabs[3]:
+    elif selected_tab == "Architecture":
         st.markdown("### Architecture")
         st.markdown(extract_section(exp, "Architecture"))
         
-    with tabs[4]:
+    elif selected_tab == "Technologies":
         st.markdown("### Technologies")
         st.markdown(extract_section(exp, "Technologies"))
         if res["file_type_summary"]:
             st.markdown("#### Detected File Extensions")
             st.write(res["file_type_summary"])
             
-    with tabs[5]:
+    elif selected_tab == "Code Analysis":
         st.markdown("### Code Analysis")
         st.markdown(extract_section(exp, "Code Analysis"))
         
-    with tabs[6]:
+    elif selected_tab == "Workflow":
         st.markdown("### End-to-End Workflow")
         st.markdown(extract_section(exp, "Workflow"))
         
-    with tabs[7]:
+    elif selected_tab == "Dependencies":
         st.markdown("### Dependencies")
         st.markdown(extract_section(exp, "Dependencies"))
         
-    with tabs[8]:
+    elif selected_tab == "AI Explanation":
         st.markdown("### Complete AI Explanation")
         st.markdown(extract_section(exp, "AI Explanation"))
         
-    with tabs[9]:
+    elif selected_tab == "Technical Details":
         st.markdown("### Technical & Performance Details")
         st.markdown(f"- **Binary Files Skipped**: {res['binary_files']}")
         st.markdown(f"- **Context Building & Clone Time**: ~{res['analysis_time_seconds']} seconds")
@@ -416,6 +453,6 @@ if "last_result" in st.session_state:
         st.markdown("#### Limitations")
         st.markdown(extract_section(exp, "Limitations"))
                 
-    with tabs[10]:
+    elif selected_tab == "Setup":
         st.markdown("### Setup & Deployment")
         st.markdown(extract_section(exp, "Setup"))
