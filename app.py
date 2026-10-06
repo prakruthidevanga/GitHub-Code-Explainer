@@ -380,6 +380,16 @@ if analyze_btn:
     if not github_url.strip():
         st.error("Please enter a valid GitHub repository URL.")
     else:
+        # Professional Error Handling for Ollama mode before starting
+        if "Ollama" in ai_mode:
+            ollama_status = check_ollama_status()
+            if not ollama_status["running"]:
+                st.error("⚠️ **Local Ollama is currently unavailable.**\n\n**Ollama endpoint:**\n`http://127.0.0.1:11434`\n\n**Required model:**\n`qwen2.5:3b`\n\n**Instruction:**\nStart Ollama and make sure qwen2.5:3b is installed.")
+                st.stop()
+            elif not ollama_status["has_model"]:
+                st.error("⚠️ **Required model not found.**\n\n**Run:**\n`ollama pull qwen2.5:3b`")
+                st.stop()
+                
         with st.status("Analyzing Repository...", expanded=True) as status:
             try:
                 st.write("🔍 Validating GitHub URL...")
@@ -503,19 +513,39 @@ if "last_result" in st.session_state:
         st.markdown(extract_section(exp, "Setup"))
         
     elif selected_tab == "Local Ollama":
-        st.markdown("### 🖥️ Local Ollama Architecture")
-        st.markdown("""
-        CodeLens AI is designed to support both highly scalable Cloud AI and completely private Local AI workflows.
+        st.markdown("### Local Ollama")
         
-        **End-to-End Workflow:**
-        1. **GitHub Repository** provided by user
-        2. **Repository Retrieval** via shallow Git clone
-        3. **Repository Analysis** (File type detection, structural mapping)
-        4. **Relevant Code Selection** (Filtering out massive binaries and useless files)
-        5. **Smart Context Builder** compiles a token-optimized representation
-        6. **Local Ollama** connection opens via `http://127.0.0.1:11434`
-        7. **Qwen 2.5 3B** offline model receives context and generates explanation
-        8. **AI Explanation** parsed into these tabs!
-
-        *Note: If you are viewing this on Streamlit Cloud, the "Local Ollama" mode will correctly report as Offline because Ollama is not installed on the cloud server container. To use Local Ollama offline, clone this repository and run `streamlit run app.py` on your own machine.*
+        ollama_status = check_ollama_status()
+        
+        st.markdown(f"**Ollama:** {'🟢 Connected' if ollama_status['running'] else '🔴 Offline'}")
+        st.markdown(f"**Model (`qwen2.5:3b`):** {'🟢 Available' if ollama_status['has_model'] else '🔴 Not Found'}")
+        st.markdown("**Endpoint:** `http://127.0.0.1:11434`")
+        
+        st.markdown("---")
+        st.markdown("#### How Local Ollama Works")
+        st.markdown("""
+        GitHub Repository  
+        ↓  
+        Repository Analysis  
+        ↓  
+        Smart Context  
+        ↓  
+        Local Ollama  
+        ↓  
+        Qwen 2.5 3B  
+        ↓  
+        Repository Explanation
         """)
+        
+        if not ollama_status["running"] or not ollama_status["has_model"]:
+            st.markdown("---")
+            st.markdown("#### Setup Instructions")
+            st.markdown("""
+            **Step 1** — Install Ollama (from ollama.com)  
+            **Step 2** — Start Ollama  
+            **Step 3** — Install the required model:  
+            `ollama pull qwen2.5:3b`  
+            **Step 4** — Verify:  
+            `ollama list`  
+            **Step 5** — Return to CodeLens AI and select **Local Ollama + Qwen 2.5 3B**
+            """)
