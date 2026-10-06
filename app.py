@@ -359,24 +359,34 @@ if "last_result" in st.session_state:
         st.markdown(f'<div class="metric-card"><div class="metric-value">{len(res["analyzed_paths"])}</div><div class="metric-label">Files Deep-Scanned</div></div>', unsafe_allow_html=True)
         
     st.markdown("<br>", unsafe_allow_html=True)
-
-    # Professional Navigation Bar using native Streamlit horizontal radio
-    nav_options = [
-        "Overview", 
-        "Repository Structure", 
-        "Files & Folders", 
-        "Architecture", 
-        "Technologies", 
-        "Code Analysis", 
-        "Workflow", 
-        "Dependencies", 
-        "AI Explanation", 
-        "Technical Details", 
-        "Setup"
-    ]
+    st.markdown("### 📑 Analysis Navigation")
     
-    selected_tab = st.radio("📑 Select Analysis Section:", nav_options, horizontal=True)
+    if "active_tab" not in st.session_state:
+        st.session_state.active_tab = "Overview"
+
+    # Row 1
+    c1, c2, c3, c4 = st.columns(4)
+    if c1.button("Overview", use_container_width=True, type="primary" if st.session_state.active_tab == "Overview" else "secondary"): st.session_state.active_tab = "Overview"
+    if c2.button("Repository Structure", use_container_width=True, type="primary" if st.session_state.active_tab == "Repository Structure" else "secondary"): st.session_state.active_tab = "Repository Structure"
+    if c3.button("Files & Folders", use_container_width=True, type="primary" if st.session_state.active_tab == "Files & Folders" else "secondary"): st.session_state.active_tab = "Files & Folders"
+    if c4.button("Architecture", use_container_width=True, type="primary" if st.session_state.active_tab == "Architecture" else "secondary"): st.session_state.active_tab = "Architecture"
+
+    # Row 2
+    c5, c6, c7, c8 = st.columns(4)
+    if c5.button("Technologies", use_container_width=True, type="primary" if st.session_state.active_tab == "Technologies" else "secondary"): st.session_state.active_tab = "Technologies"
+    if c6.button("Code Analysis", use_container_width=True, type="primary" if st.session_state.active_tab == "Code Analysis" else "secondary"): st.session_state.active_tab = "Code Analysis"
+    if c7.button("Workflow", use_container_width=True, type="primary" if st.session_state.active_tab == "Workflow" else "secondary"): st.session_state.active_tab = "Workflow"
+    if c8.button("Dependencies", use_container_width=True, type="primary" if st.session_state.active_tab == "Dependencies" else "secondary"): st.session_state.active_tab = "Dependencies"
+
+    # Row 3
+    c9, c10, c11, c12 = st.columns(4)
+    if c9.button("AI Explanation", use_container_width=True, type="primary" if st.session_state.active_tab == "AI Explanation" else "secondary"): st.session_state.active_tab = "AI Explanation"
+    if c10.button("Technical Details", use_container_width=True, type="primary" if st.session_state.active_tab == "Technical Details" else "secondary"): st.session_state.active_tab = "Technical Details"
+    if c11.button("Setup", use_container_width=True, type="primary" if st.session_state.active_tab == "Setup" else "secondary"): st.session_state.active_tab = "Setup"
+    
     st.markdown("---")
+    
+    selected_tab = st.session_state.active_tab
     
     if selected_tab == "Overview":
         st.markdown("### Project Overview")
