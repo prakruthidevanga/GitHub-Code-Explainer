@@ -20,7 +20,7 @@ from backend.repo_processor import (
     summarize_file_types,
     validate_github_url,
 )
-from backend.llm_service import explain_repository_contents
+from backend.llm_service import explain_repository_contents, check_ollama_status
 
 st.set_page_config(
     page_title="CodeLens AI - GitHub Repository Intelligence",
@@ -228,20 +228,61 @@ with st.sidebar:
     st.markdown('<div class="sidebar-brand">CodeLens AI</div>', unsafe_allow_html=True)
     st.markdown('<div class="sidebar-sub">GitHub Repository Intelligence</div>', unsafe_allow_html=True)
     
+    st.markdown("### 🤖 Select AI Mode")
+    ai_mode = st.radio("AI Mode", ["Cloud AI (Default)", "Local Ollama + Qwen 2.5 3B"], label_visibility="collapsed")
+    
     st.markdown("### System Status")
     
-    # Fake checks for UI presentation of Cloud status
     st.markdown("""
         <div class="status-badge status-online">
             <div class="status-dot dot-green"></div> APPLICATION Online
         </div><br>
         <div style="font-size: 0.8rem; margin-bottom:15px; color:#94a3b8;">Hosted on Streamlit Cloud</div>
-        
-        <div class="status-badge status-online">
-            <div class="status-dot dot-green"></div> CLOUD AI Ready
-        </div><br>
-        <div style="font-size: 0.8rem; margin-bottom:15px; color:#94a3b8;">Inference endpoints available</div>
     """, unsafe_allow_html=True)
+    
+    if "Cloud" in ai_mode:
+        st.markdown("""
+            <div class="status-badge status-online">
+                <div class="status-dot dot-green"></div> CLOUD AI Ready
+            </div><br>
+            <div style="font-size: 0.8rem; margin-bottom:15px; color:#94a3b8;">Inference endpoints available</div>
+        """, unsafe_allow_html=True)
+    else:
+        # Check Local Ollama
+        ollama_status = check_ollama_status()
+        if ollama_status["running"]:
+            st.markdown("""
+                <div class="status-badge status-online">
+                    <div class="status-dot dot-green"></div> OLLAMA Online
+                </div><br>
+                <div style="font-size: 0.8rem; margin-bottom:15px; color:#94a3b8;">Local Ollama detected</div>
+            """, unsafe_allow_html=True)
+            if ollama_status["has_model"]:
+                st.markdown("""
+                    <div class="status-badge status-online">
+                        <div class="status-dot dot-green"></div> QWEN 2.5 3B Ready
+                    </div><br>
+                    <div style="font-size: 0.8rem; margin-bottom:15px; color:#94a3b8;">Model available locally</div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                    <div class="status-badge status-offline">
+                        <div class="status-dot dot-red"></div> QWEN 2.5 3B Missing
+                    </div><br>
+                    <div style="font-size: 0.8rem; margin-bottom:15px; color:#94a3b8;">Run: ollama pull qwen2.5:3b</div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+                <div class="status-badge status-offline">
+                    <div class="status-dot dot-red"></div> OLLAMA Offline
+                </div><br>
+                <div style="font-size: 0.8rem; margin-bottom:15px; color:#94a3b8;">Local Ollama is not reachable</div>
+                
+                <div class="status-badge status-offline">
+                    <div class="status-dot dot-red"></div> QWEN 2.5 3B Unavailable
+                </div><br>
+                <div style="font-size: 0.8rem; margin-bottom:15px; color:#94a3b8;">Start Ollama and install the model.</div>
+            """, unsafe_allow_html=True)
     
     st.markdown("---")
     st.markdown("### How it works")
@@ -286,7 +327,7 @@ with col2:
     analyze_btn = st.button("✨ Analyze Repository", use_container_width=True)
 
 @st.cache_data(show_spinner=False)
-def perform_analysis(url):
+def perform_analysis(url, mode):
     started_at = time.perf_counter()
     validate_github_url(url)
 
@@ -317,6 +358,7 @@ def perform_analysis(url):
                 repository_type,
                 context,
                 analysis_notes,
+                mode
             )
 
             return {
@@ -343,8 +385,12 @@ if analyze_btn:
                 st.write("🔍 Validating GitHub URL...")
                 st.write("📥 Cloning repository & building inventory...")
                 # The actual function call is cached, so it runs quickly if already done
-                result = perform_analysis(github_url.strip())
-                st.write("🧠 Context preparation complete. Generating Cloud AI explanation...")
+                result = perform_analysis(github_url.strip(), ai_mode)
+                
+                if "Ollama" in ai_mode:
+                    st.write("🧠 Context preparation complete. Querying Local Ollama (Qwen 2.5 3B)...")
+                else:
+                    st.write("🧠 Context preparation complete. Generating Cloud AI explanation...")
                 
                 st.session_state["last_result"] = result
                 status.update(label="Analysis Complete!", state="complete", expanded=False)
@@ -395,6 +441,7 @@ if "last_result" in st.session_state:
     if c9.button("AI Explanation", use_container_width=True, type="primary" if st.session_state.active_tab == "AI Explanation" else "secondary"): st.session_state.active_tab = "AI Explanation"
     if c10.button("Technical Details", use_container_width=True, type="primary" if st.session_state.active_tab == "Technical Details" else "secondary"): st.session_state.active_tab = "Technical Details"
     if c11.button("Setup", use_container_width=True, type="primary" if st.session_state.active_tab == "Setup" else "secondary"): st.session_state.active_tab = "Setup"
+    if c12.button("Local Ollama", use_container_width=True, type="primary" if st.session_state.active_tab == "Local Ollama" else "secondary"): st.session_state.active_tab = "Local Ollama"
     
     st.markdown("---")
     
@@ -454,3 +501,21 @@ if "last_result" in st.session_state:
     elif selected_tab == "Setup":
         st.markdown("### Setup & Deployment")
         st.markdown(extract_section(exp, "Setup"))
+        
+    elif selected_tab == "Local Ollama":
+        st.markdown("### 🖥️ Local Ollama Architecture")
+        st.markdown("""
+        CodeLens AI is designed to support both highly scalable Cloud AI and completely private Local AI workflows.
+        
+        **End-to-End Workflow:**
+        1. **GitHub Repository** provided by user
+        2. **Repository Retrieval** via shallow Git clone
+        3. **Repository Analysis** (File type detection, structural mapping)
+        4. **Relevant Code Selection** (Filtering out massive binaries and useless files)
+        5. **Smart Context Builder** compiles a token-optimized representation
+        6. **Local Ollama** connection opens via `http://127.0.0.1:11434`
+        7. **Qwen 2.5 3B** offline model receives context and generates explanation
+        8. **AI Explanation** parsed into these tabs!
+
+        *Note: If you are viewing this on Streamlit Cloud, the "Local Ollama" mode will correctly report as Offline because Ollama is not installed on the cloud server container. To use Local Ollama offline, clone this repository and run `streamlit run app.py` on your own machine.*
+        """)

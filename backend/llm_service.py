@@ -83,7 +83,39 @@ def _call_cloud_llm(prompt: str) -> str:
             last_error = e
     raise last_error or OllamaResponseError("No cloud LLM providers available.")
 
-def explain_repository_contents(repository_name, repository_type, context, notes):
+def _call_ollama(prompt: str) -> str:
+    status = check_ollama_status()
+    if not status["running"]:
+        raise OllamaUnavailableError("Local Ollama is currently unavailable.\nPlease start Ollama and run: ollama pull qwen2.5:3b")
+    if not status["has_model"]:
+        raise OllamaModelError("qwen2.5:3b is not installed.\nPlease run: ollama pull qwen2.5:3b")
+        
+    payload = {
+        "model": "qwen2.5:3b", 
+        "prompt": prompt, 
+        "stream": False, 
+        "options": {"num_ctx": 8192}
+    }
+    try:
+        response = requests.post("http://127.0.0.1:11434/api/generate", json=payload, timeout=LLM_TIMEOUT_SECONDS)
+        response.raise_for_status()
+        return response.json().get("response", "").strip()
+    except requests.RequestException as e:
+        raise OllamaResponseError(f"Ollama generation failed: {e}")
+
+def check_ollama_status():
+    """Check if local Ollama is running and has the model."""
+    try:
+        res = requests.get("http://127.0.0.1:11434/api/tags", timeout=2)
+        if res.status_code == 200:
+            models = [m.get("name") for m in res.json().get("models", [])]
+            has_model = any(m.startswith("qwen2.5:3b") for m in models)
+            return {"running": True, "has_model": has_model}
+        return {"running": True, "has_model": False}
+    except requests.RequestException:
+        return {"running": False, "has_model": False}
+
+def explain_repository_contents(repository_name, repository_type, context, notes, ai_mode="Cloud AI (Default)"):
     prompt_started = time.perf_counter()
     prompt = f"""You are CodeLens AI, an expert software architecture and repository explainer.
 Analyze this public GitHub repository deeply and explain it using ONLY the provided evidence.
@@ -141,6 +173,11 @@ Provide a comprehensive, beginner-friendly but technically accurate explanation 
 What important information cannot be determined from this repository content?
 """
     logger.info("Cloud LLM prompt prepared in %.2fs (%d chars)", time.perf_counter() - prompt_started, len(prompt))
-    answer = _call_cloud_llm(prompt)
+    
+    if "Ollama" in ai_mode:
+        answer = _call_ollama(prompt)
+    else:
+        answer = _call_cloud_llm(prompt)
+        
     return answer, 1
 
