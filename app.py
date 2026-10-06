@@ -179,6 +179,18 @@ st.markdown("""
             font-size: 0.9rem;
             overflow-x: auto;
         }
+
+        /* Warning Box */
+        .warning-box {
+            background-color: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -435,7 +447,7 @@ if "last_result" in st.session_state:
         if res["analysis_notes"]:
             st.markdown("#### Analysis Notes")
             for note in res["analysis_notes"]:
-                st.warning(note)
+                st.markdown(f'<div class="warning-box">⚠️ {html.escape(note)}</div>', unsafe_allow_html=True)
         st.markdown("#### Limitations")
         st.markdown(extract_section(exp, "Limitations"))
                 
