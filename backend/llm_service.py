@@ -95,7 +95,7 @@ def _call_ollama(prompt: str) -> str:
         "prompt": prompt, 
         "stream": False,
         "keep_alive": "5m",
-        "options": {"num_ctx": 8192}
+        "options": {"num_ctx": 4096}
     }
     try:
         response = requests.post("http://127.0.0.1:11434/api/generate", json=payload, timeout=900)

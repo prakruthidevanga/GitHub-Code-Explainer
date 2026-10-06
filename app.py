@@ -351,7 +351,7 @@ def perform_analysis(url, mode):
             timings["scanning"] = time.perf_counter() - t1
             
             t2 = time.perf_counter()
-            context, analyzed_paths = build_model_context(file_entries, content_items, structures)
+            context, analyzed_paths = build_model_context(file_entries, content_items, structures, mode)
             timings["context"] = time.perf_counter() - t2
             
             if len(file_entries) >= MAX_DISCOVERED_FILES:

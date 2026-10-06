@@ -410,7 +410,7 @@ def inspect_repository_files(file_entries):
     return structures, content_items, analysis_notes
 
 
-def build_model_context(file_entries, content_items, structures):
+def build_model_context(file_entries, content_items, structures, ai_mode="Cloud AI"):
     """Build a bounded context with README, documents, source, and binary inventory."""
     lines = [
         f"Repository file inventory ({len(file_entries)} tracked files):",
@@ -429,9 +429,15 @@ def build_model_context(file_entries, content_items, structures):
         lines.append(f"- ... {len(file_entries) - MAX_TREE_ENTRIES} additional files")
 
     lines.append("\nExtracted repository content:")
-    remaining_characters = MAX_REPOSITORY_CONTEXT_CHARACTERS - sum(len(line) for line in lines)
+    
+    # Dynamic scaling for Local vs Cloud limits
+    is_ollama = "Ollama" in ai_mode
+    max_chars = 4500 if is_ollama else 8500
+    max_items = 6 if is_ollama else 14
+    
+    remaining_characters = max_chars - sum(len(line) for line in lines)
     included_paths = set()
-    content_item_limit = min(MAX_CONTENT_ITEMS, len(content_items))
+    content_item_limit = min(max_items, len(content_items))
     for item in content_items[:content_item_limit]:
         if item["category"] in {"documentation", "pdf_with_text"}:
             per_item_limit = 1_200
