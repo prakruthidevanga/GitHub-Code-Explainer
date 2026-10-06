@@ -44,9 +44,18 @@ def _call_hf(prompt: str) -> str:
     if not HF_TOKEN:
         raise OllamaUnavailableError("HF_TOKEN is not set.")
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    payload = {"inputs": prompt, "parameters": {"max_new_tokens": MAX_OUTPUT_TOKENS, "temperature": 0.1, "return_full_text": False}}
+    payload = {
+        "model": HF_MODEL,
+        "messages": [
+            {"role": "system", "content": "You are a careful repository code explainer."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.1,
+        "max_tokens": MAX_OUTPUT_TOKENS,
+        "stream": False
+    }
     try:
-        response = requests.post(f"https://api-inference.huggingface.co/models/{HF_MODEL}", headers=headers, json=payload, timeout=LLM_TIMEOUT_SECONDS)
+        response = requests.post("https://router.huggingface.co/v1/chat/completions", headers=headers, json=payload, timeout=LLM_TIMEOUT_SECONDS)
     except requests.Timeout as e:
         raise OllamaTimeoutError("HuggingFace request timed out.") from e
     except requests.RequestException as e:
@@ -58,14 +67,9 @@ def _call_hf(prompt: str) -> str:
         raise OllamaResponseError(f"HuggingFace API error {response.status_code}: {response.text[:300]}")
     try:
         data = response.json()
-        if isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
-            return data[0]["generated_text"].strip()
-        elif isinstance(data, dict) and "generated_text" in data:
-            return data["generated_text"].strip()
-        else:
-            raise OllamaResponseError("Unexpected HuggingFace response format.")
-    except ValueError as e:
-        raise OllamaResponseError("Invalid JSON from HuggingFace.") from e
+        return data["choices"][0]["message"]["content"].strip()
+    except (ValueError, KeyError, IndexError) as e:
+        raise OllamaResponseError("Invalid JSON or response format from HuggingFace.") from e
 
 def _call_cloud_llm(prompt: str) -> str:
     providers = [("groq", _call_groq), ("huggingface", _call_hf)] if PRIMARY_PROVIDER == "groq" else [("huggingface", _call_hf), ("groq", _call_groq)]
