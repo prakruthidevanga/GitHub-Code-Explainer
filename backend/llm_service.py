@@ -118,9 +118,8 @@ def check_ollama_status():
     except requests.RequestException:
         return {"running": False, "has_model": False}
 
-def explain_repository_contents(repository_name, repository_type, context, notes, ai_mode="Cloud AI (Default)"):
-    prompt_started = time.perf_counter()
-    prompt = f"""You are CodeLens AI, an expert software architecture and repository explainer.
+def build_prompt(repository_name, repository_type, context, notes):
+    return f"""You are CodeLens AI, an expert software architecture and repository explainer.
 Analyze this public GitHub repository deeply and explain it using ONLY the provided evidence.
 Do NOT generate generic descriptions. Explain the ACTUAL contents of this specific repository.
 Never invent files, functions, APIs, or architectures. If something cannot be determined, explicitly state: "This could not be determined from the available repository content."
@@ -175,6 +174,10 @@ Provide a comprehensive, beginner-friendly but technically accurate explanation 
 # Limitations
 What important information cannot be determined from this repository content?
 """
+
+def explain_repository_contents(repository_name, repository_type, context, notes, ai_mode="Cloud AI (Default)"):
+    prompt_started = time.perf_counter()
+    prompt = build_prompt(repository_name, repository_type, context, notes)
     logger.info("Cloud LLM prompt prepared in %.2fs (%d chars)", time.perf_counter() - prompt_started, len(prompt))
     
     if "Ollama" in ai_mode:

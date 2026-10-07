@@ -458,9 +458,9 @@ if analyze_btn:
 if "pending_ollama_result" in st.session_state:
     st.info("Generating explanation with Local Qwen 2.5 3B via your browser... (This may take a minute depending on your hardware)")
     
-    from backend.llm_service import SYSTEM_PROMPT
+    from backend.llm_service import build_prompt
     r = st.session_state["pending_ollama_result"]
-    prompt = f"{SYSTEM_PROMPT}\n\nRepository Name: {r['repository_name']}\nType: {r['repository_type']}\n\nNotes:\n" + "\n".join(r['analysis_notes']) + f"\n\nContext:\n{r['context_for_ollama']}"
+    prompt = build_prompt(r['repository_name'], r['repository_type'], r['context_for_ollama'], r['analysis_notes'])
     
     gen_result = ollama_connector(
         action="generate", 
