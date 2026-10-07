@@ -1,24 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
+    <meta charset="utf-8">
 </head>
 <body>
     <script>
+        // ----------------------------------------------------
+        // Streamlit Component Protocol (Vanilla JS)
+        // ----------------------------------------------------
+        function sendMessageToStreamlitClient(type, data) {
+            const outData = Object.assign({
+                isStreamlitMessage: true,
+                type: type,
+            }, data);
+            window.parent.postMessage(outData, "*");
+        }
+
+        function setComponentReady() {
+            sendMessageToStreamlitClient("streamlit:componentReady", {apiVersion: 1});
+        }
+
+        function setFrameHeight(height) {
+            sendMessageToStreamlitClient("streamlit:setFrameHeight", {height: height});
+        }
+
+        function setComponentValue(value) {
+            sendMessageToStreamlitClient("streamlit:setComponentValue", {value: value});
+        }
+
+        // ----------------------------------------------------
+        // Component Logic
+        // ----------------------------------------------------
         let lastRequestId = null;
 
-        function onRender(event) {
-            const args = event.detail.args;
-            if (!args || !args.request_id) return;
-            
-            // Prevent infinite loops by only processing new requests
-            if (args.request_id === lastRequestId) return;
-            lastRequestId = args.request_id;
+        window.addEventListener("message", function(event) {
+            if (event.data.type === "streamlit:render") {
+                const args = event.data.args;
+                if (!args || !args.request_id) return;
+                
+                // Prevent infinite loops by only processing new requests
+                if (args.request_id === lastRequestId) return;
+                lastRequestId = args.request_id;
 
-            const action = args.action;
+                const action = args.action;
 
-            if (action === "check_status") {
-                fetch("http://127.0.0.1:11434/api/tags")
+                if (action === "check_status") {
+                    fetch("http://127.0.0.1:11434/api/tags")
+                        .then(r => {
+                            if (!r.ok) {
+                                throw new Error("HTTP Status " + r.status);
+                            }
+                            return r.json();
+                        })
+                        .then(res => {
+                            const hasModel = res.models && res.models.some(m => m.name.startsWith("qwen2.5:3b"));
+                            setComponentValue({ status: "success", running: true, has_model: hasModel });
+                        })
+                        .catch(e => {
+                            setComponentValue({ 
+                                status: "error", 
+                                running: false, 
+                                has_model: false, 
+                                error: (e.name ? e.name + ": " : "") + e.message,
+                                action: action
+                            });
+                        });
+                } else if (action === "generate") {
+                    fetch("http://127.0.0.1:11434/api/generate", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(args.payload)
+                    })
                     .then(r => {
                         if (!r.ok) {
                             throw new Error("HTTP Status " + r.status);
@@ -26,46 +78,22 @@
                         return r.json();
                     })
                     .then(res => {
-                        const hasModel = res.models && res.models.some(m => m.name.startsWith("qwen2.5:3b"));
-                        Streamlit.setComponentValue({ status: "success", running: true, has_model: hasModel });
+                        setComponentValue({ status: "success", response: res.response });
                     })
                     .catch(e => {
-                        Streamlit.setComponentValue({ 
+                        setComponentValue({ 
                             status: "error", 
-                            running: false, 
-                            has_model: false, 
                             error: (e.name ? e.name + ": " : "") + e.message,
                             action: action
                         });
                     });
-            } else if (action === "generate") {
-                fetch("http://127.0.0.1:11434/api/generate", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(args.payload)
-                })
-                .then(r => {
-                    if (!r.ok) {
-                        throw new Error("HTTP Status " + r.status);
-                    }
-                    return r.json();
-                })
-                .then(res => {
-                    Streamlit.setComponentValue({ status: "success", response: res.response });
-                })
-                .catch(e => {
-                    Streamlit.setComponentValue({ 
-                        status: "error", 
-                        error: (e.name ? e.name + ": " : "") + e.message,
-                        action: action
-                    });
-                });
+                }
             }
-        }
-        
-        Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
-        Streamlit.setComponentReady();
-        Streamlit.setFrameHeight(0);
+        });
+
+        // Initialize
+        setComponentReady();
+        setFrameHeight(0);
     </script>
 </body>
 </html>
