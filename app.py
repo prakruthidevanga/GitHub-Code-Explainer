@@ -256,9 +256,13 @@ with st.sidebar:
         
         status_res = ollama_connector(action="check_status", request_id=st.session_state["check_id"], key="ollama_status_sidebar")
         if status_res is None:
-            ollama_status = {"running": False, "has_model": False}
+            ollama_status = {"running": False, "has_model": False, "error": None}
         else:
-            ollama_status = {"running": status_res.get("running", False), "has_model": status_res.get("has_model", False)}
+            ollama_status = {
+                "running": status_res.get("running", False), 
+                "has_model": status_res.get("has_model", False),
+                "error": status_res.get("error")
+            }
 
         if ollama_status["running"]:
             st.markdown("""
@@ -287,7 +291,12 @@ with st.sidebar:
                     <div class="status-dot dot-red"></div> OLLAMA Offline
                 </div><br>
                 <div style="font-size: 0.8rem; margin-bottom:15px; color:#94a3b8;">Local Ollama is not reachable</div>
+            """, unsafe_allow_html=True)
+            
+            if ollama_status.get("error"):
+                st.error(f"Browser Error: {ollama_status['error']}")
                 
+            st.markdown("""
                 <div class="status-badge status-offline">
                     <div class="status-dot dot-red"></div> QWEN 2.5 3B Unavailable
                 </div><br>
@@ -590,14 +599,21 @@ if "last_result" in st.session_state:
         
         status_res_tab = ollama_connector(action="check_status", request_id=st.session_state["check_id_tab"], key="ollama_status_tab")
         if status_res_tab is None:
-            ollama_status = {"running": False, "has_model": False}
+            ollama_status = {"running": False, "has_model": False, "error": None}
         else:
-            ollama_status = {"running": status_res_tab.get("running", False), "has_model": status_res_tab.get("has_model", False)}
+            ollama_status = {
+                "running": status_res_tab.get("running", False), 
+                "has_model": status_res_tab.get("has_model", False),
+                "error": status_res_tab.get("error")
+            }
         
         st.markdown(f"**Ollama:** {'🟢 Connected' if ollama_status['running'] else '🔴 Offline'}")
         st.markdown(f"**Model (`qwen2.5:3b`):** {'🟢 Available' if ollama_status['has_model'] else '🔴 Not Found'}")
         st.markdown("**Endpoint:** `http://127.0.0.1:11434`")
         
+        if ollama_status.get("error"):
+            st.error(f"Diagnostic Error: {ollama_status['error']}\n\n(This usually means your browser blocked the connection due to Mixed Content / Private Network policies, or CORS is missing.)")
+            
         st.markdown("---")
         st.markdown("#### How Local Ollama Works")
         st.markdown("""

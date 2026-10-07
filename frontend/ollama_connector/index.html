@@ -19,13 +19,24 @@
 
             if (action === "check_status") {
                 fetch("http://127.0.0.1:11434/api/tags")
-                    .then(r => r.json())
+                    .then(r => {
+                        if (!r.ok) {
+                            throw new Error("HTTP Status " + r.status);
+                        }
+                        return r.json();
+                    })
                     .then(res => {
                         const hasModel = res.models && res.models.some(m => m.name.startsWith("qwen2.5:3b"));
                         Streamlit.setComponentValue({ status: "success", running: true, has_model: hasModel });
                     })
                     .catch(e => {
-                        Streamlit.setComponentValue({ status: "error", running: false, has_model: false, error: "Connection failed (Check CORS or if Ollama is running)" });
+                        Streamlit.setComponentValue({ 
+                            status: "error", 
+                            running: false, 
+                            has_model: false, 
+                            error: (e.name ? e.name + ": " : "") + e.message,
+                            action: action
+                        });
                     });
             } else if (action === "generate") {
                 fetch("http://127.0.0.1:11434/api/generate", {
@@ -33,12 +44,21 @@
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(args.payload)
                 })
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) {
+                        throw new Error("HTTP Status " + r.status);
+                    }
+                    return r.json();
+                })
                 .then(res => {
                     Streamlit.setComponentValue({ status: "success", response: res.response });
                 })
                 .catch(e => {
-                    Streamlit.setComponentValue({ status: "error", error: e.toString() });
+                    Streamlit.setComponentValue({ 
+                        status: "error", 
+                        error: (e.name ? e.name + ": " : "") + e.message,
+                        action: action
+                    });
                 });
             }
         }
