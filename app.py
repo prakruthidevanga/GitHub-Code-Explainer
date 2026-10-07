@@ -444,6 +444,7 @@ if analyze_btn:
                     st.write("🧠 Context preparation complete. Querying Local Ollama (Qwen 2.5 3B) via browser...")
                     st.session_state["pending_ollama_result"] = result
                     st.session_state["ollama_gen_id"] = str(uuid.uuid4())
+                    st.session_state["ollama_request_started_at"] = time.perf_counter()
                 else:
                     st.write("🧠 Context preparation complete. Generating Cloud AI explanation...")
                     st.session_state["last_result"] = result
@@ -460,22 +461,45 @@ if "pending_ollama_result" in st.session_state:
     
     from backend.llm_service import build_prompt
     r = st.session_state["pending_ollama_result"]
-    prompt = build_prompt(r['repository_name'], r['repository_type'], r['context_for_ollama'], r['analysis_notes'])
+    prompt = build_prompt(
+        r['repository_name'],
+        r['repository_type'],
+        r['context_for_ollama'],
+        r['analysis_notes'],
+        local_ollama=True,
+    )
     
     gen_result = ollama_connector(
         action="generate", 
-        payload={"model": "qwen2.5:3b", "prompt": prompt, "stream": False, "keep_alive": "5m", "options": {"num_ctx": 4096}}, 
+        payload={
+            "model": "qwen2.5:3b",
+            "prompt": prompt,
+            "stream": False,
+            "keep_alive": "5m",
+            "options": {
+                "num_predict": 1000,
+                "temperature": 0.2,
+                "num_ctx": 4096,
+            },
+        },
         request_id=st.session_state["ollama_gen_id"], 
         key="ollama_gen_comp"
     )
     if gen_result is not None:
+        ollama_request_seconds = (
+            time.perf_counter() - st.session_state.pop("ollama_request_started_at")
+        )
+        timings = r.setdefault("timings", {})
+        timings["llm_request"] = ollama_request_seconds
+        timings["total"] = timings.get("total", 0) + ollama_request_seconds
+        r["analysis_time_seconds"] = round(timings["total"], 2)
         if gen_result.get("status") == "success":
             r["explanation"] = gen_result.get("response", "")
             st.session_state["last_result"] = r
         else:
             st.error(f"Browser Ollama Error: {gen_result.get('error')}")
         del st.session_state["pending_ollama_result"]
-        st.experimental_rerun()
+        st.rerun()
 
 # Results Display
 if "last_result" in st.session_state:

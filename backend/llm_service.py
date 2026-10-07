@@ -118,7 +118,48 @@ def check_ollama_status():
     except requests.RequestException:
         return {"running": False, "has_model": False}
 
-def build_prompt(repository_name, repository_type, context, notes):
+def build_prompt(repository_name, repository_type, context, notes, local_ollama=False):
+    if local_ollama:
+        report_instruction = (
+            "Return a detailed but concise Markdown report, aiming for 700-900 tokens "
+            "and never exceeding 1,000 generated tokens. Complete every required "
+            "section, then stop immediately. Do not add extra chat text."
+        )
+        section_guidance = {
+            "overview": "What is this specific project, what problem does it solve, and what are its main features?",
+            "architecture": "Explain the actual architecture and component relationships, citing evidence.",
+            "files": "Summarize the important discovered files and folders, their roles, and how they connect.",
+            "technologies": "List technologies actually found and cite repository evidence.",
+            "code": "Identify important actual classes, functions, and modules, briefly describing their roles and relationships.",
+            "workflow": "Summarize the actual application workflow and data flow from input to output.",
+            "dependencies": "List important dependencies and configuration, with their evidenced purpose.",
+            "setup": "Describe how to configure and run the project, and deployment details if present. Mention APIs and external services if present.",
+            "explanation": "Give concise key takeaways about this repository's purpose, features, structure, data flow, and technical decisions.",
+            "limitations": "State important limitations and unknowns based on the available evidence.",
+        }
+    else:
+        report_instruction = "Return a MASSIVE, highly detailed Markdown report strictly following these exact headings. Do not include any extra chat text."
+        section_guidance = {
+            "overview": "What is this specific project and what problem does it solve? What are its major features?",
+            "architecture": "Explain the ACTUAL architecture of this submitted repository. Show the relationship between major components (e.g., User -> UI -> Backend -> DB).",
+            "files": """For EACH important file discovered, provide:
+1. File name & path
+2. Purpose of the file
+3. What the file contains
+4. Important classes and functions
+5. How it connects to other files and its overall role.""",
+            "technologies": 'Detect and list the specific programming languages, frameworks, libraries, databases, and tools used in this repository. Cite the evidence (e.g., "FastAPI found in requirements.txt").',
+            "code": """Identify ACTUAL classes, functions, methods, and modules. For each important function/class, explain:
+- What it is and what it does
+- How it works
+- What it receives (Inputs) and what it returns (Outputs)
+- What it calls and why it matters""",
+            "workflow": "Explain the complete end-to-end workflow step by step, from user input to final output, based on the ACTUAL implementation in the code.",
+            "dependencies": "List actual dependencies found in requirements.txt, package.json, etc. Explain the purpose of each key dependency and where it is used.",
+            "setup": "How is the project configured, run, and deployed based on the evidence?",
+            "explanation": "Provide a comprehensive, beginner-friendly but technically accurate explanation of the ENTIRE repository covering its overview, purpose, problem solved, features, structure, architecture, data flow, error handling, and technical decisions. Write this so a BCA student could use it for a project viva.",
+            "limitations": "What important information cannot be determined from this repository content?",
+        }
     return f"""You are CodeLens AI, an expert software architecture and repository explainer.
 Analyze this public GitHub repository deeply and explain it using ONLY the provided evidence.
 Do NOT generate generic descriptions. Explain the ACTUAL contents of this specific repository.
@@ -133,51 +174,42 @@ Analysis notes:
 Repository evidence (file inventory, structural summaries, and selected excerpts):
 {context}
 
-Return a MASSIVE, highly detailed Markdown report strictly following these exact headings. Do not include any extra chat text.
+{report_instruction}
 
 # Overview
-What is this specific project and what problem does it solve? What are its major features?
+{section_guidance['overview']}
 
 # Architecture
-Explain the ACTUAL architecture of this submitted repository. Show the relationship between major components (e.g., User -> UI -> Backend -> DB).
+{section_guidance['architecture']}
 
 # Files & Folders
-For EACH important file discovered, provide:
-1. File name & path
-2. Purpose of the file
-3. What the file contains
-4. Important classes and functions
-5. How it connects to other files and its overall role.
+{section_guidance['files']}
 
 # Technologies
-Detect and list the specific programming languages, frameworks, libraries, databases, and tools used in this repository. Cite the evidence (e.g., "FastAPI found in requirements.txt").
+{section_guidance['technologies']}
 
 # Code Analysis
-Identify ACTUAL classes, functions, methods, and modules. For each important function/class, explain:
-- What it is and what it does
-- How it works
-- What it receives (Inputs) and what it returns (Outputs)
-- What it calls and why it matters
+{section_guidance['code']}
 
 # Workflow
-Explain the complete end-to-end workflow step by step, from user input to final output, based on the ACTUAL implementation in the code.
+{section_guidance['workflow']}
 
 # Dependencies
-List actual dependencies found in requirements.txt, package.json, etc. Explain the purpose of each key dependency and where it is used.
+{section_guidance['dependencies']}
 
 # Setup
-How is the project configured, run, and deployed based on the evidence?
+{section_guidance['setup']}
 
 # AI Explanation
-Provide a comprehensive, beginner-friendly but technically accurate explanation of the ENTIRE repository covering its overview, purpose, problem solved, features, structure, architecture, data flow, error handling, and technical decisions. Write this so a BCA student could use it for a project viva.
+{section_guidance['explanation']}
 
 # Limitations
-What important information cannot be determined from this repository content?
+{section_guidance['limitations']}
 """
 
 def explain_repository_contents(repository_name, repository_type, context, notes, ai_mode="Cloud AI (Default)"):
     prompt_started = time.perf_counter()
-    prompt = build_prompt(repository_name, repository_type, context, notes)
+    prompt = build_prompt(repository_name, repository_type, context, notes, "Ollama" in ai_mode)
     logger.info("Cloud LLM prompt prepared in %.2fs (%d chars)", time.perf_counter() - prompt_started, len(prompt))
     
     if "Ollama" in ai_mode:
@@ -186,4 +218,3 @@ def explain_repository_contents(repository_name, repository_type, context, notes
         answer = _call_cloud_llm(prompt)
         
     return answer, 1
-

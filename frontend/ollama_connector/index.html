@@ -25,7 +25,7 @@
         }
 
         function setComponentValue(value) {
-            sendMessageToStreamlitClient("streamlit:setComponentValue", {value: value});
+            sendMessageToStreamlitClient("streamlit:setComponentValue", {dataType: "json", value: value});
         }
 
         // ----------------------------------------------------
